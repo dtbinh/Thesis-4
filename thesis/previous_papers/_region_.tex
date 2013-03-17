@@ -1,0 +1,279 @@
+\message{ !name(thesis.tex)}
+\message{ !name(thesis.tex) !offset(2) }
+
+\maketitle
+
+\begin{abstract}
+This work begins with an overview of Simultaneous Localization and Mapping (SLAM).  The goal is to allow the reader to become familiar enough with the concepts behind SLAM to be able to create their own implementation.  Key ideas include the robot model, probabilistic interpretations of motion and observation, map representation and Bayes filters.  That is followed by an examination of the state of the art, with a focus on Multi-Robot SLAM.  Particular attention will be paid to least-squares smoothing methods and map joining.  Finally, a single step map joining algorithm will be presented and applied to the multi-robot case.  Experimental results from both simulated and actual robot data will be presented.  
+\end{abstract}
+
+\section{What is SLAM?}
+
+Mobile robot navigation tasks fall into three major categories: planning, localization and mapping.  For a robot to make a meaningful choice of actions, it requires some data to act on.  The key information is a map of the environment and the robot's location within that environment.  Thus, localization and mapping are the two tasks that provide a foundation for mobile robotics.  Localization alone requires a perfectly known map, mapping requires near perfect localization [CITE Slam Pt 1].  Except in very specific artificial environments, these requirements are never met.  Most realistic environments are only partially observable.  
+
+Early robotics research tried to accomplish these two tasks separately, but quickly found that no matter how accurate the robot's sensors are, the measurement error was unbounded over time.  The result was localization or mapping would invariably diverge from the true state of the environment.  A real breakthrough happened when it was discovered that the two problems were related.  When localization and mapping are combined into a single task, the solution tends to converge on the true state [Cite Thrun PR?].  This combined task is known as Simultaneous Localization and Mapping (SLAM).
+
+=====.
+
+One of the main challenges of robot navigation is overcoming sensor noise.  Wheel encoders, range finders, inertial sensors; they all have limits on their accuracy.  This uncertainty results in continuously growing error in the robot's belief about the position of landmarks and its own location as measurements are taken.  To deal with this uncertainty as it related to mapping, early work leading up to SLAM techniques introduced the concept of a Stochastic Map \cite{cheeseman1987stochastic}.  
+
+A Stochastic Map is a collection of landmarks with uncertain positions, the relationships between these landmarks and the degree of uncertainty between them.  Along with the map, the robot may keep track of its history of poses.  A robot pose is simply a vector indicating its Cartesian coordinates, Euler angles and heading angle at a particular time step.  A landmark is commonly represented by Cartesian coordinates alone because they are generally assumed to be fixed for the duration of the task.  A covariance matrix is used to keep track of the degree of uncertainty between landmark positions.
+
+As a robot travels through an environment making observations, the correlation between landmarks increases, converging towards an accurate map.  Consider a pair of features, each some uncertain distance from the robot.  The sensors will measure the distance as some value with a degree of error.  The robot then moves to another position and again observes these two landmarks.  This second observation reinforces the relationship between the landmarks, reducing the uncertainty of their relative distance.  This reduction in uncertainty comes because the measurement error is inherent in the robot, so all the landmarks share the same error.  As a network of relationships between landmarks and robot poses grows, the map tends towards an accurate relative representation \cite{durrant2006simultaneous}.  This increasing certainty in landmark position allows the robot to accurately determine its own position given an observation of a feature it has seen before.
+
+SLAM implementations face a number of challenges.  The earliest solutions, using Extended Kalman Filters (EKF), had a complexity of $O(n^2)$ for $n$ landmarks \cite{ThrunPR2005}.  As the number of landmarks grows any robot will be overwhelmed by the map size.  Researchers have tried many different approaches to deal with this complexity.  The result is a plethora of algorithms, many of which have proved quite successful.  
+
+The most difficult task associated with SLAM is known as closing the loop.  When a robot revisits a previously observed location, it has created a loop in its trajectory and may incorporate that information to correct drift present in prior estimates.  This situation requires the estimate of the entire map and robot trajectory to be recalculated which greatly improves the accuracy of the map.  This is a very computationally intensive task though.  Additionally, the robot must recognize when it has revisited an area.  If it is mistaken and thinks the area is new or, even worse, thinks it has closed a loop when it hasn’t, the result is a catastrophic failure of the map.  A detailed discussion of loop closing can be found in \cite{LoopClosing}.
+
+\section{Some notation}
+
+The literature for SLAM is filled with dense mathematical notation that is sometimes difficult to penetrate.  This is unavoidable because of the subject matter, but luckily there are a number of conventions used almost universally.  The objects under consideration in the models below are the robot’s pose, the results of sensor readings, and the map.  The actions available to the robot consist of movement and observation.  
+
+Movement is described by:
+
+\begin{equation}\label{predict_stepB}
+p(x_{t}|x_{t-1},u_{t})
+\end{equation}
+
+This gives the probability of the robot being at a particular pose $x_{t}$ given its last pose at time $t-1$ and a control input, $u$.  A possible source of confusion is the use of $x$ as the pose variable;  $x$ is a vector describing the position and heading angle, $[x,y]$. This is separate from the $x$ of the Cartesian coordinates of the robot and should be clear from context.  
+
+Observation is described by:
+
+\begin{equation}\label{obs_stepB}
+p(z_{t}|x_{t})
+\end{equation}
+   
+This model gives the probability that there is something at position $z$, that was correctly observed given the current pose of the robot, $x$, at some time $t$.  If a map, $m$, is being kept, it may be included in equation \ref{obs_stepB} to yield:
+\begin{equation}\label{obs_step_mapB}
+p(z_{t}|x_{t},m)
+\end{equation}
+
+For the full SLAM problem, the entire robot trajectory is maintained along with a list of control inputs and observations made over the course of the robot’s activity.  These are represented as sets $X$, $U$ and $Z$ respectively, each corresponding to the variables used for their members.   
+
+A number of calculations involve matrices and vectors.  When describing a vector of the form
+
+\[
+\left[ {\begin{array}{cc}
+ x \\
+ y \\
+\theta
+\end{array} } \right]
+\]
+
+the notation $\left[ {\begin{array}{cc} x, y, \dots, n\end{array} }\right]^T$ will be used, indicating that the matrix should be transposed for calculations.  
+
+\section{The Robot}
+
+Two models are necessary to describe a mobile robot for SLAM:  a motion model and an observation model.  The motion model describes the movement of the robot given a prior pose and control inputs.  The observation model describes how the robot’s sensors are used to see its environment.  These models can be formulated either deterministically or probabilistically.  The difference between a probabilistic and deterministic model is simply that the probabilistic model takes sensor noise into account and calculates a probability distribution for the map state.  A probability distribution can either be described by parameters, such as the mean and variance, or non-parametrically with a series of points.  The deterministic model assumes that the kinematics and sensor readings are correct and free of noise.  
+
+Robotic motion can take on a variety of forms from wheels to legs to flying rotors.  The most common drive systems are either car-like or differential drives.  The latter is well suited to indoor experiments and is remarkably simple to model, but has weaknesses that prevent it from being useful in sloped environments.  Car like systems are very effective for outdoor experiments with uneven terrain, but are more difficult to model.  The focus here will be on differential drives.  Explanations of other locomotion systems can be found in \cite{Dudek} and \cite{DBLP}.
+
+Differential drives consist of two wheels separated by an axle.  Each wheel is controlled by a different motor and turns independently on the axle.  This configuration allows the robot to turn in a circle either centered on a wheel or the center of the axle.  However, error in the wheel velocity leads to errors in position which are difficult to model.  Because of this, differential drives are best suited to level environments with even terrain.  
+
+The motion model describes how a control input becomes a change in pose.  Control input can take a variety of forms such as a tuple consisting of the linear and angular velocity of the robot or the velocity of each wheel.  Most data sets \cite{Radish} use the linear and angular velocity form, which leads to the velocity motion model described in \cite{ThrunPR2005}.
+
+The control vector $u_{t} =[v_{t}, \omega_{t}]^T$ is the linear velocity v and angular velocity $\omega$ at time $t$.  Ideally, the control will result in a pose at time $t+1$ described by:
+
+\begin{equation}\label{motion_model}
+\vec{x}_{t+1}=
+\left[ {\begin{array}{cc}
+ x' \\
+ y' \\
+\theta'
+\end{array} } \right] +
+\left[ {\begin{array}{cc}
+ -\frac{v}{\omega} sin(\theta)+\frac{v}{\omega} sin(\theta + \omega) \\
+ \frac{v}{\omega} cos(\theta)-v cos(\theta + \omega)  \\
+\omega
+\end{array} } \right] 
+\end{equation}
+
+
+Special consideration must be given to the case of motion in a straight line.  If the motion were strictly linear, the angular velocity will be 0, so the formula given in \ref{motion_model} would involve division by 0.  In this case, the formula is instead:
+
+\begin{equation}\label{motion_model2}
+\vec{x}_{t+1}=[x', y', \theta']^T=[x, y, \theta]^T + [v sin\theta , v cos\theta, 0]^T 
+\end{equation}
+
+The more realistic case adds noise to the control input and final heading.  This noise has some probability distribution, usually assumed to be Gaussian, with a mean $\mu=0$ and some variance, $\sigma$.  The variance is usually determined experimentally by taking a number of measurements to discover the actual and expected results of a control input.
+
+For the particular case of a differential drive, the control inputs are usually given as the velocities of the left and right wheels.  The angular velocity is the difference between the velocities of the two wheels divided by the distance $d$ between the wheels:  $d=vr-vl$.  The linear velocity is calculated as $v=\frac{v_r+v_l}{2}$.  After this manipulation, the model described in \ref{motion_model} and \ref{motion_model2} can be applied.  A more detailed explanation of the differential drive and its kinematics is given in chapter 3 of \cite{Dudek}.  Other motion models involving odometry, rather than velocity, have also been developed in \cite{ThrunPR2005}.
+
+The observation model consists of a description of the sensors, the current map and the current robot pose.  Sensors can take a variety of forms from sonar and laser range finders to camera.  This paper will consider rangefinders for the most part, in particular laser, sonar and infrared sensors.  Interesting work has been done with monocular SLAM in \cite{MonoSLAM}.  
+
+While sensor data can be interpreted in a variety of ways, the Extended Kalman Filter relies on features.  Feature extraction with rangefinders usually depends on the ability to detect geometric objects in the environment based on the sensor response.  Like the motion model, the observation model requires a probabilistic interpretation and a geometric model.  The probabilistic model , given in \cite{ThrunPR2005}, is as follows for range $r$, sensor angle relative to the robot $\phi$, and landmark signature $s$:
+
+\begin{equation}\label{motion_model}
+\left[ {\begin{array}{cc}
+ r_{t}^{i} \\
+ \phi^{i} \\
+ s_{t}^{i}
+\end{array} } \right] =
+\left[ {\begin{array}{cc}
+ -\frac{v}{\omega} sin(\theta)+\frac{v}{\omega} sin(\theta + \omega) \\
+ \frac{v}{\omega} cos(\theta)-v cos(\theta + \omega)  \\
+\omega
+\end{array} } \right] 
+\left[ {\begin{array}{cc}
+\sqrt{(m_{j,x}-x)^2+(m_{j,y}-y)^2} \\
+atan2(m_{j,y}-y,m_{j,x}-x)-\theta \\
+s_j
+\end{array} } \right] 
++ \vec{\epsilon}
+\end{equation}
+
+where the $j^{th}$ observed feature $f_j$ , $[x,y,\theta ]^T$ is the robot pose and $\vec{\epsilon}$ is the noise added to the observation.  This model assumes known correspondence with landmarks, that is, each landmark is uniquely identifiable by the robot.  This correspondence is denoted by the variable s.  A subtle point to note in this equation is the use of polar coordinates as the result, while the feature is described in cartesian coordinates.  Range sensors give a simple distance reading and are placed at some angle on the robot, so it is natural for the input to be in polar form.  This must be transformed into cartesian coordinates in order to get the position of the observed feature relative to the robot.  
+
+A challenge present in rangefinder data is the extraction of features from raw range data. While there are several techniques available to work with raw data, the most common SLAM techniques require features.  Information on feature extraction with sonar is a little more challenging to locate, but is of interest because they are common on several mobile robot platforms.  Most researchers have dismissed sonar as too noisy and error prone to be useful for localization except underwater.  However, recent work has shown sonar can be used effectively for indoor localization making it useful for low budget research \cite{lee2007feature}.  
+
+The model described in \cite{lee2007feature} utilizes simple geometric features, the line, point and arc.  In order to deal with the noise of sonar, each feature is defined by a pair of sonar scans at two separate poses.  By examining the intersection of the two scans, it is possible to determine the geometry of the observed feature.  This idea of using multiple sensor readings to discern landmarks is quite common for low resolution sensors.
+
+\section{The Map}
+
+Conceptually, a map is just a list of unique landmarks along with their positions.  As a robot observes landmarks in its environment, it must decide whether these correspond to features on the map it is building or need to be added.  This is known as the data association problem.  In some cases, the correspondence between landmarks and map features is known.  For example, if there were a unique pattern, such as a barcode, on each item in an area that the robot was exploring, it could use that to positively identify which landmark it was observing.  An environment with unknown correspondence would be, for example, a route through a lightly wooded area.  It would be difficult for the robot to uniquely identify each tree, but it can take advantage of machine learning techniques to determine the most likely correspondence between a landmark and feature.
+
+Two common map types are location maps and feature maps.  A location map is a discretized representation of the environment, where each cell is marked as occupied or unoccupied.  This leads to the aptly named Occupancy Grid maps. Occupancy Grid maps are excellent for path planning because both occupied and unoccupied space is explicitly represented.  Their drawback is that it is difficult to move observations if they’re incorrectly placed because it can be challenging to determine where two landmarks are separated if they appear very close together.   Examples and algorithms for occupancy grid maps are found in \cite{ThrunPR2005}, \cite{lee2007feature} and \cite{eliazar2004dp}.  
+
+Feature maps store information about each observed landmark, including it’s position, geometry and possibly other characteristics.  Feature based maps can be very compact and allow for the position of objects to be moved easily.  This type of map is used most often in SLAM implementations due to the popularity of the Extended Kalman Filter.  
+
+The key to understanding SLAM is in the map.  As the robot makes more observations of landmarks, the corresponding features on the map become more correlated and improve the certainty of the map \cite{durrant2006simultaneous}.  The correspondence between map features is usually represented by a covariance matrix describing the amount of noise shared by the observations. However, with more landmarks, more processing is required as the confidence improves.  Given the limited processing available on a mobile robot, even with the most efficient SLAM algorithms, the map will grow too large to deal with in real time.  The other complication is that SLAM involves a non-linear system and filtering algorithms for non-linear systems begin with a approximation that linearizes the problem.  This non-linearity grows with map size [cite me!!], increasing the likelihood of failure.  One proposed solution to this is to break the global map into overlapping submaps.  In this scenario, the final pose of a map $m_{k}$ is the always the first pose of map $m_{k+1}$.  
+
+\section{Algorithms}
+SLAM comes in two variants, online SLAM and full or batch SLAM.  Online SLAM is used when the robot needs to maintain a map estimate at all times.  Batch SLAM is used after data has been collected, but in practice proves to be fast enough to use in many real time scenarios.
+
+The process of SLAM is usually divided into discrete time steps.  Online SLAM methods that rely on filtering are almost always recursive in nature.  They estimate the current state based on the last state.  These algorithms are all based on a somewhat generic algorithm known as the Recursive Bayes Filter \cite{ThrunPR2005} \cite{diard2003survey}.  It is a two step process consisting of a prediction step and an update step.  In very simple terms, it models how the robot moves to a location and calculates the probability that it is actually where it intended to go.  Then the robot looks around to get an idea of where it actually ended up, conditioned on the earlier probability of its location.
+
+Mathematically, the two steps of the Bayes Filter, given a state $x_{t-1}$, control commands $u_t$ and a measurement $z_t$ is:
+
+\begin{equation}\label{ekf_predict}
+bel(x_t) = \int p(x_t| u_t,x_{t-1}) bel(x-1)dx_{t-1}     
+\end{equation}
+\begin{equation}\label{ekf_measure}
+bel(x_t) =η p(z_t|x_t)\bar{bel}(x_t)                           
+\end{equation}
+
+Note the use of equations \ref{predict_stepB} and \ref{obs_stepB} in the above calculation.  The functions $bel$ and $\bar{bel}$ indicate the robot's belief of about the environment state.  This is necessary because the environment is always only partially observable to a mobile robot due to sensor noise and the inability of the robot to sense its global pose directly.  The function $\bar{bel}$ is the posterior knowledge of the state based on the prediction step.  The function $bel$ is the posterior belief about the state after the measurement update is performed.
+
+The Extended Kalman Filter (EKF) is by far the most common state estimation algorithm used in SLAM.  It is based on the Kalman Filter, but works non-linear functions, whereas the Kalman Filter works only for linear functions. The EKF begins by linearizing the odometry and observations, then applies the basic Kalman Filter algorithm.  Like other Bayesian state estimators, the EKF is a two step algorithm with a time update and an observation update. The EKF is also in a class of filters known as Gaussian Filters.  These filters make the assumption that the noise: that it is normally distributed.  Several other variants of the EKF exist, most notably the Unscented Kalman Filter (UKF), discussed in \cite{UKF}.
+
+The EKF relies on two other functions, commonly denoted as $g$ and $h$ with noise $\epsilon_t$ and $\delta_t$:
+\begin{equation}\label{g}
+g(u_t, x_t-1)+\epsilon_t, 
+\end{equation}
+and 
+\begin{equation}\label{h}
+h(x_t)+\delta_t.
+\end{equation} 
+
+These are respectively the motion and observation models discussed earlier.  These functions can be linear or non-linear, but in any case, they must be differentiable.  EKFs use first order Taylor Expansion to linearize.  This is simply the partial derivate of both g and h with respect to $x_{t-1}$.  In order to ensure the linear approximation is accurate, the partial derivative is evaluated at $\mu_{t-1}$ for both g and h.  These new functions are often referred to as the Jacobian matrices (or simply the Jacobians) of g and h, symbolized by $\nabla g$ and $\nabla h$ respectively.  Note than when implementing an EKF, it is not necessary to calculate the derivative every time, but the value of the Jacobian will vary at each time step because it is a function.  Several pseudocode implementations of the EKF can be found in \cite{ThrunPR2005}.
+
+One key limitation of the EKF is that the noise in odometry and sensors must be normally distributed, or Gaussian.  In cases where the noise is likely to be normal, such as indoor environments with consistent surfaces, the EKF is probably a great choice, but in expansive outdoor environments, between the types of sensors and the properties of the terrain, other methods are preferable.  
+
+Another limitation associated with the EKF is that it invariably becomes inconsistent after long runs by becoming overconfident about the estimated state \cite{Julier01acounter}.  In some cases, this causes a catastrophic estimation failure that is nevertheless difficult to detect.  If great care is taken, it is possible to keep the growth of the inconsistency slow \cite{BaileyNGSN06}.  But, while the inconsistency can be mitigated, it can never be eliminated.  The consequence is that EKF SLAM is not suitable for long term exploration.  Still, it is an excellent tool for short term, non-critical exploration tasks.
+
+There are a number of alternative algorithms to the EKF.  One popular choice is the particle filter.  Particle filters belong to a class of non-parametric filters.  This simply means that they do not explicitly model a particular probability distribution, but instead use Monte Carlo methods to take a number of samples of possible states \cite{Thrun02d}.   The \emph{particle} is a single sample, generated by taking the measured state and adding random process noise to the measurement.  
+
+An interesting property of particle filters is that their computational complexity can be modified to fit available resources \cite{ThrunPR2005}.  While this ability to reduce complexity comes at the cost of accuracy, it is often better to make some timely estimate rather than wait for something more precise.  They have been used with great success in the popular FastSLAM algorithm \cite{montemerlo2003fastslam}.
+
+The EKF and Particle Filter algorithms are both online algorithms.  Offline or batch algorithms are increasingly a subject of research.  The key property of batch SLAM is the maintenance of the robot trajectory rather than just the current pose.   An excellent example of this class of SLAM algorithms is GraphSLAM \cite{Thrun05GS}.  It possesses several properties used in advanced SLAM implementations: sparseness and the information form of the covariance matrix.
+
+The \emph{graph} in GraphSLAM refers to a graph of information constraints describing the robot's knowledge of the map and trajectory.  The graph consists of two node types and two corresponding edge types.  Nodes are either robot poses or observed landmarks.  Edges link either sequential poses or poses to landmarks.  The constraints are expressed as edge weights calculated by 
+\begin{equation}\label{constraint1}
+(z_{t}^{i} - h(z))^TQ_{t}^{-1}(z_{t}^{i} - h(z)) 
+\end{equation}
+and 
+\begin{equation}\label{constraint2}
+(x_{t} - g(x))^TR_{t}^{-1}(z_{t}^{i} - g(x)),
+\end{equation}
+ where $z_t^i$ is the $i^{th}$ observation at time $t$, $Q$ is the measurement covariance matrix and $h$ is the measurement model in the first equation, and $x_{t}$ is the robot pose at time $t$, $R$ is the observation covariance matrix and $g$ is the motion model in the second equation.  The resulting graph is sparse, as opposed to fully or nearly fully connected.  Because of this, updates are always local and do not suffer from the poor performance of full matrix updates.  The graph can also be represented as an information matrix, which is essentially a weighted adjacency matrix.  This corresponds to the covariance matrix used in traditional SLAM and is in fact just the inverse of that covariance matrix.  There is also an associated information vector that corresponds to the usual state vector.  
+
+GraphSLAM produces two estimates: one for the robot trajectory and another for the map.  An intuition of the graph is to consider vertices and edges as masses attached to springs \cite{Thrun05GS}.  To estimate the trajectory, landmarks and their corresponding links to poses are removed and the eliminated links are added back into the edges connecting just the poses such that the \emph{spring force} is maintained.  The map is calculated by using the information matrix produced by the trajectory estimate step.  The information matrix is inverted to give a covariance matrix and this is multiplied by the information vector to produce a state estimate.  
+
+\section{State of the Art}
+
+Square Root Smoothing and Mapping ($\sqrt{SAM}$) is a full SLAM algorithm developed by Frank Dellaert and Michael Kaess that represents a break from earlier filtering approaches. Rather than filtering, it uses statistical smoothing methods over the robot trajectory.  Smoothing over the entire trajectory turns out to be more efficient in practice that the EKF once the number of features exceeds 600 \cite{Dellaert06ijrr}.  Where filtering assumes that the current state is complete at each step when it is actually a linearized estimate, smoothing uses each pose in the trajectory to help calculate the most likely state.
+
+Incremental Smoothing and Mapping (iSAM) is an extension of $\sqrt{SAM}$ that takes advantage of sparseness inherent in the full SLAM formulation to make only incremental updates as necessary \cite{Kaess08tro}. The incremental nature of the algorithm means it can handle data as it comes in, which allows it to be run on an actual robot in service.  iSAM does SLAM by formulating each step as a least squares problem.  The result is the error in the map is a linear function that can be solved by the Gauss-Newton optimization method.
+
+iSAM is often used as a map optimization tool for graph based SLAM applications \cite{Sunderhauf}.  A mobile robot that is operating in an environment can add nodes and edges to a graph, just as in GraphSLAM.  Once the map is needed for planning, iSAM can be run on the graph, even if the graph is extremely large, and return a result in a matter of seconds.  While this is still not quite fast enough to make some time critical decisions, it is a great leap forward for SLAM algorithms.
+
+Iterated Sparse Local Submap Joining (I-SLSJF) is yet another approach that tries to reduce the complexity of SLAM.  In this case, the reduction comes from dividing the problem into a series of overlapping submaps  \cite{huang2008iterated}.  Where graph based SLAM first estimates a graph of poses, submap joining works more like traditional SLAM in that it focuses on the estimation of feature locations.  As a side effect of the submap joining process, a coarse estimate of the robot trajectory is produced.  But because the entire trajectory is not maintained, the number of dimensions in the problem is greatly reduced when compared to other batch SLAM solutions.
+
+Submaps are usually produced with an EKF or other simple estimation technique and consist of a single step with a start and end pose in a local frame of reference.  The end pose of a map is always the start pose of the next map in order to facilitate the fusing process.  The initial version of the algorithm uses an information filter to match observations shared between maps.  This filtering can still suffer from some linearization errors, so if an inconsistency is detected at any step, it can apply smoothing to the global map to recover from this inconsistency.  
+
+Another area of very active research is cooperative multi-robot mapping \cite{wang2007multi} \cite{multiSEIF}, \cite{4399142}, \cite{4543634}, \cite{5509154}.  Outside of SLAM research, robot groups are popular because of improved redundancy and the obvious benefits of being able to execute a task in a distributed manner.  Often multi-robot systems consist of lower cost components because the group as a whole has a higher fault tolerance than any individual member.  If an individual fails, the impact on the completion of the overall goal is mitigated.   This can be useful in situations where the individual chance of failure is relatively high, or the cost of failure is high.  
+
+There are two challenges associated with multi-robot SLAM: distinguishing robots from landmarks and the determination of a shared frame of reference.  Mistaking a robot for a landmark and adding it to the map can lead to an extremely inconsistent landmark.  If a robot in the team is observed and classified as a landmark in one location and then observed again at another location, the observer may conclude that a loop has been closed, when this has in fact not occurred.  The simplest way to cope with this is for the team to have a priori knowledge of the other members and devise some way to uniquely distinguish them from the environment, such as a barcode or unique pattern of infrared flashes.  The other alternative is to make the SLAM implementation robust in a dynamic environment, but this comes with unique data association challenges.
+
+Determination of a shared reference frame can be done by sharing maps when a mutual pose observation occurs between two or more robots.  Once a robot determines that it has observed another robot, it can communicate with the other team member and share its map and current pose estimate.  In the map thus shared, there will be an estimate of the position of the team member.  This point can then be used like the shared start end end poses with I-SLSJF SLAM.  Once the location of the two robots is determined, it becomes possible to calculate the correct rotation and translation vectors to align the shared map with the robot's local map.
+
+
+
+\documentclass[12pt]{article}
+\title{Multi Robot Map Joining}
+\author{John Downs}
+\date{August 2012}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The focus of the Spring semester’s work was the development of a SLAM implementation using submaps and map joining that was applicable to both single and multi robot scenarios.  Map joining SLAM can reduce the dimensionality of the problem and simplifies the data association when sharing maps between robots.  This paper covers some of the mathematical concepts such as least squares optimization and data association.  Also discussed is the relationship between traditional least squares SLAM approaches and map joining.
+\end{abstract}
+
+\section{Introduction}
+\cite{cheeseman1987stochastic}.  
+
+Early SLAM research made heavy use of Bayes Filters such as the Extended Kalman Filter and Particle Filter to create a large global map of features in a robot’s environment.  This approach worked well for small scale environments with a limited number of features, but proved to be inadequate for more expansive and feature rich environments.  As the number of landmarks increases, computation time grows and error due to linearization have a greater effect.  This was originally known as the online-SLAM problem, the idea being that a robot could use an online-SLAM algorithm to create a map in real time and use it for planning purposes.  
+The online SLAM problem is contrasted with the Full SLAM problem.  In this case, the entire trajectory is retained, along with the relationship of the various poses to landmark observations.  Naively, this formulation seems to be more complex and thus was not considered a viable solution early on for real time planning.  However, the techniques developed turned out to be faster than filters in practice.  
+A drawback to most Full SLAM solutions is their high dimensionality and the complexity of the implementations.  Another approach, map joining, can reduce the dimensionality of the problem and the error due to linearization, while having simpler implementations.  It is also easily adaptable to multi-robot scenarios.  When two maps share a robot pose, either through being at sequential time steps or through observation of another robot, it becomes fairly easy to find the correct coordinate frame transformations to create a global map.
+
+\section{Technical Background}
+\subsection{ Least Squares Estimates }
+
+The key to the performance of full SLAM solutions is the least squares formulation.  The objective is to minimize the Mahalanobis distance between the predicted state and combined prediction and observation.  Mahalanobis distance is a measure of similarity for two data sets.  Applied to SLAM, this estimate uses the entire robot trajectory and observations to date to calculate a total state estimate.  Because it uses the entirety of the data available, it is called smoothing, to contrast it with filtering, which only uses the current estimate, rather than all historical data.  Smoothing finds a single state estimate that best fits all the available data.  
+	The Least Squares formulation of SLAM is to minimize:
+$f(x_t-1,u)^TPf(x_t-1,u) + h(z)^TRh(z) $   TODO: Check this equation! Something -
+	where f()is the motion model with covariance P, and his the observation model with covariance R, uis the set of control inputs and z is the set of observations.
+ Many methods exist for solving linear least squares problems, but the motion and observation models are almost never linear in practice.  When a linear least squares problem is at hand, there is always a closed form solution, thus it can be solved in a single step.  However, because SLAM is non-linear, it requires iterative methods to solve.  The reason for this is that no methods exist for solving these types of problems, so we must search for a solution.  A number of machine learning algorithms exist to solve these problems, both deterministic and stochastic.
+
+\subsection{Map Joining}
+The map joining approach to SLAM relies on the creation of submaps: local maps focused only on a subset of a trajectory and the immediately related observations.  The creation of local maps is usually accomplished by either Extended Kalman or Information Filters. Markov Chain Monte Carlo methods have also been suggested (CITE).  While these methods prove to be inconsistent, this inconsistency is only significant in large sets of observations.  By limiting their scope, linearization errors, inconsistency and complexity can be held in check.
+The earliest paper I have found on map joining is [TARDOS 2002].  This describes the fundamental operations of map joining: transformation from a common observation into a global coordinate frame and feature association.  More recent formulations [C-SAM] have eliminated the need for explicit transformation through the use of a graph theoretic formulation of SLAM.  In this case, the more general term ‘map alignment’ is used over transformation.
+No matter how the maps are aligned, the second step is data association.  Because of possible noise in the observation of a common landmark, alignment may not place all landmarks at the same point.  This requires a classification algorithm to be run over the map, such as k-Nearest Neighbor or Joint Compatibility Branch and Bound [TARDOS 2002].  Other classifiers can be used, but are not common in the literature.  Classification can be eliminated if noiseless identification of features is possible, such as when using cameras and unambiguous barcodes.
+If there are common landmarks between the two submaps, after classification, a new state estimate is required to make sense of the matched but non-coincident features.  This is accomplished by calculating a least squares estimate of the new global map, to create a best fit ‘curve’ describing all the observations.
+
+\subsection{ Spherical Matrices, One Step SLAM and Map Joining}
+A key observation to the reduction of dimensionality in single step SLAM is the 	use of spherical covariance matrices.  An spherical matrix is defined as any matrix that is commutative with a rotation matrix.  A rotation matrix R(theta) is [cos t -sin t; sin t cos t] ← CHECK THIS  .  For all theta and any spherical matrix A, AR = RA.  
+This property allows for the reformulation of the Full SLAM function into 
+Formula here
+It is important that the covariance matrices are also positive definite.  A matrix is positive definite if for all positive, non-zero column vectors v, v^T Mv > 0. This is to allow for methods analogous to finding the square-root of a matrix, such as Cholesky or QR factorization to be used in the solution of the least squares estimate. 
+In the Automatica preprint, Dr. Huang claims that this objective function, when applied to single step SLAM, is equivalent to a one dimensional optimization problem.  Through repeated application of single step SLAM for each timestep, an approximate solution to the previous objective function can be easily found.  It is approximate because a spherical covariance matrix is used, rather than the actual covariance associated with observation uncertainty.
+In On The Num of Local Minima, Dr. Huang shows that single step SLAM and map joining SLAM share the same property of having only 1 or 2 minima, one of which is global, when covariances are approximated by spherical matrices.  This provides the benefits of the reduction in linearization error due to map joining, along with the low dimensionality of single step SLAM.  Additionally, if multi-robot map joining belongs to this class of problems, map sharing can possibly become quite efficient.
+In a remark from On The Number.. H notes that the covariance matrices must only be spherical, but not identical.  That is, the covariance can differ for each odometry measurement and observation.  This lends some home to the possibility that multi-robot map joining is in this class of problems.
+
+\subsection{SLAM and Machine Learning}
+	There are two sub-problems within SLAM that call for the application of machine learning techniques, landmark association and least squares optimization.  These are two separate types of problems, the former being unsupervised classification, the latter is convex optimization.
+Landmark association, also known as data association, is a classification problem that uses a pair of feature maps or a map and set of observations and tries to match known landmarks with new observations.  In most cases, this is an unsupervised learning problem because the set of features can vary so greatly from map to map, it is not possible to provide examples for a supervised approach.  This is necessary for any environment where there can be ambiguity in landmarks.  While it might be possible in a lab to put barcodes on landmarks that can be recognized with a camera, in scenarios where a camera might not be available or barcoding landmarks unfeasible, landmark association is required.
+The least squares portion of SLAM is non-linear and of a very high dimension.  Because of this, single step techniques such as linear regression are not applicable.  Other algorithms such as Levenberg-Marquardt, Gauss-Newton and Stochastic Gradient Descent must be used instead.  These three methods are the most popular among SLAM researchers.  
+	The Gauss-Newton method is used effectively in iSAM (CITE).  It is a variation on Newton’s method for finding the minima of a function taught in elementary calculus courses but is modified to solve least squares problems.  It begins with an initial guess x_0 of a possible solution.  For an objective function f(x) and a residual function r(x), the jacobian at r(x_0) is calculated.  The jacobian is a linearization estimate of r(x) and is used for the next guess.  This process is repeated until it converges on a solution.  It is possible in certain situations to overshoot the optimum and fail to converge.  This algorithm can also fail to find a global optimum and instead converge on a local optimum.
+	Gradient descent is an optimization algorithm similar to hill climbing, but rather than selecting a single element to improve, it follows the slope (or gradient) of the function towards a solution.  Like Gauss-Newton, gradient descent can get stuck in local optima.  A modification known as stochastic gradient descent can overcome this limitation.  
+
+\section{My Experiments}
+\subsection{The First Attempt}
+The first attempt at implementing SLAM involved adapting the algorithm in [1] from the e-Puck to the Khepera III models for Webots.  I designed a rectangular arena with several cubes for landmarks.  The implementation was altered to move around the arena using a Braitenberg vehicle navigation strategy and to use sonar and infrared sensors rather than a camera for landmark detection.  A total of three robots were added to the Webots world.  This simulation was plagued with numerical instability.  
+Whenever a robot’s wheel would move backwards, this would cause the robot position to become undefined and would result in the model disappearing from the simulation.  This was due to a bug in the code provided by [1].  After trying to resolve the issue with poor results, I decided to try a different approach.  I also worked briefly with the Mobile Robot Programming Toolbox [2], attempting to work around the simulation instability, but found the documentation on the required features was too incomplete, the author having focused on Kinect functionality instead.
+\subsection{The Second Attempt}
+A new review of robotics toolkits provided by other researchers resulted in two findings.  First, most implementations were in Matlab [3] [4], and those that weren’t tended to be older and poorly documented and unmaintained.  Matlab seems to be used most often because of it’s high level mathematical libraries and ease of use (as it is an interpreted language).  Second, most SLAM implementations used data files with velocity measurements and range/bearing measurements of landmarks.  This is done to abstract away the particulars of a robot and instead focus on the details of SLAM.  I then found an excellent multi robot data set that was in the correct form for doing SLAM [8].
+At this point, I was able to move forward again.  The map joining approach is a continuation of the work done in [5], [6], and [7].  It first requires a sequence of submaps that share end and start poses at the transition from one to the next.  These maps can be produced by any SLAM algorithm.  I chose the EKF because it is the simplest to implement.  The initial pass was buggy and lead to very poor maps, which later affected the quality of the global map state.  This EKF implementation was later replaced by working through the tutorial in [9].  
+Each map consisted of two robot poses, the last pose from the previous map (except the first map, which has the initial pose), and the final pose.  The first map was considered the ‘global map’ that all subsequent maps were added to.  The maps were combined by translating the new local map to the coordinate frame of the global map and then solving the least squares SLAM formulation provided in [6].  This least squares approach searches for a state vector that minimizes the square of observation error for each landmark.  This equation was translated into a fitness function that could be used by machine learning algorithms to find a solution.  In this case, I used a genetic algorithm using the combined local and global state vector as the gene string.  Preliminary runs would converge to a solution in less than 100 generations, but it is not clear whether this behavior will continue when used with more accurate maps.  
+\subsection{More to do}
+The new one step EKF SLAM implementation needs to be combined with the map joining algorithm.  This should just be a matter of refining the interface between these two components.  The map joining approach will be compared to the EKF-only maps.  The map joining algorithm needs to be made more modular so other machine learning algorithms can be applied.  Finally, data needs to be collected from the Khepera robots to see if this approach can work with unknown data association.  
+For multiple robots, I need to develop a way to detect when map sharing is appropriate.  When a robot detects another one, there will be a common pose that can allow for the correct translation of the frames of reference and the same fitness function can be applied.  It is still an open question as to whether this has the same number of local minima as the situations described in [5].
+Grade:
+While I feel I did not make all the progress I wanted this Spring, I did complete a number of the pieces necessary to answer these questions.  I have also come to understand a number of concepts involved with SLAM that were beyond the scope of the first part of this project.  It was fair, but not outstanding work, so I feel a B would be appropriate.
+
+bibliography{paper.bib}{}
+\bibliographystyle{IEEE}
+\end{document}
+
+\message{ !name(thesis.tex) !offset(-279) }
