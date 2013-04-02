@@ -22,8 +22,11 @@ function y = fitness(x1,x2,x)
     q = eye(length(x1)); %inv(I) = I
     % get the set of landmarks in each
     % make sure the maps x1 and x2 are the union!
-    
-    y = (x1-x)'*q*(x1-x)+(x2-x)'*q*(x2-x);
+    try
+        y = (x1-x)'*q*(x1-x)+(x2-x)'*q*(x2-x);
+    catch err
+        keyboard
+    end
 end
 
 function [y1 y2] = weave(x1, x2, start)

@@ -160,5 +160,8 @@ T = Landmark_Groundtruth(:,[2 3 1])'; T = T(:); T(3:3:end) = Barcodes(6:end,2);
 RMSE_map = sqrt(mean((x(4:end)-T).^2)/length(x));
 
 start_t = Traj(1);
+if start_t < 1
+    start_t = 1;
+end
 T = groundtruth(start_t:end,2:end); % skip initial pose
 RMSE_traj = sqrt(mean((Traj(:,2:end) - T).^2)/length(Traj)); %TODO Reshape this
