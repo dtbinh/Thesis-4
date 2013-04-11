@@ -164,4 +164,7 @@ if start_t < 1
     start_t = 1;
 end
 T = groundtruth(start_t:end,2:end); % skip initial pose
-RMSE_traj = sqrt(mean((Traj(:,2:end) - T).^2)/length(Traj)); %TODO Reshape this
+len = size(Traj,1) * size(Traj(:,2:end),2);
+Traj_r = reshape(Traj(:,2:end)', [len, 1]);
+Tr = reshape(T, [len, 1]);
+RMSE_traj = sqrt(mean((Traj_r - Tr).^2)/length(Traj_r));

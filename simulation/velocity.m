@@ -1,4 +1,4 @@
-function [ v ] = drive( origin, goal, max_v)
+function [ v ] = velocity( origin, goal, max_v)
 %DRIVE calculate velocity to point
 
     X = [origin;goal];

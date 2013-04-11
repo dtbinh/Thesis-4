@@ -1,8 +1,11 @@
-RMSE = cell(5,1);
+RMSE_map = cell(5,1);
+RMSE_traj = cell(5,1);
 x = cell(5,1);
 P = cell(5,1);
+Traj = cell(5,1);
+
 for ii = 1:5
-    [RMSE{ii} x{ii} P{ii}] = slam(0.5, [1.5 2], num2str(ii));
+    [x{ii} P{ii} Traj{ii} RMSE_map{ii} RMSE_traj{ii}] = slam(0.5, [1.5 2], num2str(ii));
     figure(ii + 5);
     imagesc(P{ii});
 end
