@@ -66,7 +66,7 @@ t0 = measurement(1) + .001;
 t_end = length(odometry);
 step = 1;
 x = [groundtruth(1,2:end)'; zeros(3 * n_landmarks,1)];
-disp(x(1:3))
+%disp(x(1:3))
 P = eye(size(x,1)) * p_val;
 
 u = [t0;0;0];
@@ -85,7 +85,7 @@ for t = t0:step:t_end
     end
     
     j = 1; z = []; c = [];
-    disp('*****')
+    %disp('*****')
     rendevous = [];
     while size(measurement,1) >= lmk0 && measurement(lmk0,1) < t
         obs = measurement(lmk0,2:end)';
@@ -94,10 +94,10 @@ for t = t0:step:t_end
         else
             z = [z obs];
         end
-        disp(z)
-        disp('^^^^')
-        disp(rendevous)
-        disp('%%%%')
+        %disp(z)
+        %disp('^^^^')
+        %disp(rendevous)
+        %disp('%%%%')
         j = j + 1;
         lmk0 = lmk0 + 1;
     end
@@ -152,11 +152,13 @@ for t = t0:step:t_end
     set(Rt, 'xdata', groundtruth(counter, 2), 'ydata', groundtruth(counter, 3));
     set(L, 'xdata', x(4:3:end), 'ydata', x(5:3:end));
     counter = counter + 1;
-    drawnow
+    %drawnow
 end
 
 
-T = Landmark_Groundtruth(:,[2 3 1])'; T = T(:); T(3:3:end) = Barcodes(6:end,2);
+T = Landmark_Groundtruth(:,[2 3 1])'; 
+T = T(:); 
+T(3:3:end) = Barcodes(6:end,2);
 RMSE_map = sqrt(mean((x(4:end)-T).^2)/length(x));
 
 start_t = Traj(1);
