@@ -85,7 +85,7 @@ for t = t0:step:t_end
     localmap_P(:,6:3:end) = [];
     localmap_P(6:3:end,:) = [];
     save(filename, 'localmap_st', 'localmap_P', 'rendevous', '-v7.3');
-
+    counter = counter + 1;
 end
 
 
