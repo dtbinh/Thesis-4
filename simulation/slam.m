@@ -6,7 +6,7 @@ groundtruth = waypoint_list;
 measurement = eval(strcat('observations_', robot));
 odometry = eval(strcat('odometry_', robot));
 
-mapspace = [1 1 1 reshape(repmat(Barcodes(n_robots+1:end,2)',[3,1]), [1,n_landmarks*3])];
+mapspace = [1 1 1 reshape(repmat(map_true(:,1)', [3,1]), [1,3* landmarks])];
 mapmgr = [0 0 0 mapspace(4:end)];
 
 
@@ -14,10 +14,10 @@ mapmgr = [0 0 0 mapspace(4:end)];
 Zs = find(measurement(:,2) == 0);
 measurement(Zs, :) = [];
 % end strip
-t0 = measurement(1) + .001;
-t_end = length(odometry);
+t0 = 0;
+t_end = measurement(end,1);
 step = 1;
-x = [groundtruth(1,2:end)'; zeros(3 * n_landmarks,1)];
+x = zeros(3 * landmarks + 3,1);
 %disp(x(1:3))
 P = eye(size(x,1)) * p_val;
 
@@ -41,15 +41,12 @@ for t = t0:step:t_end
     rendevous = [];
     while size(measurement,1) >= lmk0 && measurement(lmk0,1) < t
         obs = measurement(lmk0,2:end)';
-        if find(Ignore == obs(1))
-            rendevous = [rendevous obs];
-        else
+%         if find(Ignore == obs(1))
+%             rendevous = [rendevous obs];
+%         else
             z = [z obs];
-        end
-        %disp(z)
-        %disp('^^^^')
-        %disp(rendevous)
-        %disp('%%%%')
+        %end
+
         j = j + 1;
         lmk0 = lmk0 + 1;
     end
@@ -63,7 +60,7 @@ for t = t0:step:t_end
         lmk_ct = size(z,2);
         z_ctr = 1;
         for i = 1:lmk_ct
-            c = [c;find(mapspace == lmks(i))];
+            c = [c;find(mapspace == lmks(i))'];
             if isempty(find(mapspace == lmks(i)))
                 z(:,z_ctr) = [];
                 z_ctr = z_ctr - 1;
@@ -75,12 +72,12 @@ for t = t0:step:t_end
     x(find(mapmgr)) = 0;
 
 
-    [x, P] = EKF(x, P, u(2:3), z, c, n_landmarks, coef); %, r_coef, q_coef);
+    [x, P] = EKF(x, P, u(2:3), z, c, landmarks, coef); %, r_coef, q_coef);
     Traj = [Traj; t x(1:3)'];
     
     dirname = strcat('./bot', num2str(robot));
     filename = strcat(dirname, '/localmap_', num2str(counter));
-    local_ids = [0;0;0;reshape(repmat(Barcodes(n_robots+1:end,1)',[2,1]), [1,n_landmarks*2])'];
+    local_ids = [0;0;0;reshape(repmat(map_true(:,1)',[2,1]), [1,landmarks*2])'];
     localmap_st = x;
     localmap_st(6:3:end) = []; % remove ids
     localmap_st = [local_ids localmap_st];
@@ -89,25 +86,12 @@ for t = t0:step:t_end
     localmap_P(6:3:end,:) = [];
     save(filename, 'localmap_st', 'localmap_P', 'rendevous', '-v7.3');
 
-    lid_ct = 1;
-    %if c
-      for lid = 4:3:size(mapspace,2) %c(:,1)
-        le = x(lid:lid+1);
-        LE = P(lid:lid+1,lid:lid+1);
-        [X,Y] = cov2elli(le,LE,3,16);
-        set(eG(lid_ct),'xdata',X,'ydata',Y);
-        lid_ct = lid_ct + 1;
-      end
-    %end
-    
-    counter = counter + 1;
-    %drawnow
 end
 
 
-T = Landmark_Groundtruth(:,[2 3 1])'; 
+T = map_true(:,[2 3 1])'; 
 T = T(:); 
-T(3:3:end) = Barcodes(6:end,2);
+
 RMSE_map = sqrt(mean((x(4:end)-T).^2)/length(x));
 
 start_t = Traj(1);
@@ -115,7 +99,9 @@ if start_t < 1
     start_t = 1;
 end
 T = groundtruth(start_t:end,2:end); % skip initial pose
-len = size(Traj,1) * size(Traj(:,2:end),2);
-Traj_r = reshape(Traj(:,2:end)', [len, 1]);
-Tr = reshape(T, [len, 1]);
+Traj_r = Traj(1:length(Traj)/length(T):end, :); Traj_r = Traj_r(:,2:3)'; 
+Traj_r = Traj_r(:);
+T = T';
+Tr = T(:);
+%Tr = reshape(T, [len, 1]);
 RMSE_traj = sqrt(mean((Traj_r - Tr).^2)/length(Traj_r));
