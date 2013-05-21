@@ -1,16 +1,26 @@
 function [X, FVAL, EXITFLAG, OUTPUT, GRAD] = join_maps(m1, m2)
     %m1: [x_r;y_r;a_r;f_1x;f_1y;f_1id;...f_nx;f_ny;f_nid]
     %m2: second submap transformed into the frame of m1
+    if isrow(m1)
+        m1 = m1';
+    end
+    if isrow(m2)
+        m2 = m2';
+    end
     p = [m1(1:3);m2(1:3)];
     x1 = [p;m1(4:end)];
     x2 = [p;m2(4:end)];
     guess_0 = zeros(size(x1,1),1);
     fit = @(x)fitness(x1,x2,x); %(x1-x)'*q*(x1-x)+(x2-x)'*q*(x2-x);
-    [X,FVAL,EXITFLAG,OUTPUT,GRAD] = fminunc(fit ,guess_0);
+    options = optimset('Display', 'off') ;
+    %[X,FVAL,EXITFLAG,OUTPUT,GRAD] = fminunc(fit ,guess_0, options);
+    [X,FVAL,EXITFLAG,OUTPUT,GRAD,SCORES] = ga(fit,length(x1), options);
 end
 
 function y = fitness(x1,x2,x)
-    
+    if isrow(x)
+        x = x';
+    end
     x1_missing = find(x1(7:end) == 0) + 6;
     x2_missing = find(x2(7:end) == 0) + 6;
     

@@ -23,8 +23,6 @@ void print_list(point_list* p) {
 }
 
 
-
-
 int main(int argc, char** argv)
 {
     srand48(time(NULL));

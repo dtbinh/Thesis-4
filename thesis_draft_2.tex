@@ -2,11 +2,10 @@
 \title{Simultaneous Localization and Mapping with Multi Robot Map Joining}
 \author{John Downs}
 \date{Feb 2013}
-\fontfamily{palatino}
 \usepackage[total={5.75in,9in}, top=1in, left=1.5in, includefoot]
 {geometry}
 \usepackage{setspace}
-\doublespacing
+\linespread{2}
 \usepackage{concmath}
 \usepackage[T1]{fontenc}
 \usepackage{amssymb,amsmath}
@@ -442,6 +441,8 @@ The second experiment...
 Map joining aggregate mean 0.0347
 Map joining aggregate stddev 0.0164
 
+Actual - average iterations is 2.5
+
 The third experiment...
 Aggregate mean : ....
 Aggregate std dev: ....
@@ -564,42 +565,28 @@ Graphs for T Tests!!
 
 	The two possible explanations for this are an inaccurate initial pose and linearization errors.  In the case of the experiment using the UTIAS data set, an accurate initial pose for each robot was available.  The discrepancy must be due to linearization errors then.  This, combined with the overconfidence of the EKF means the robot cannot recover from this error and will continue to converge on an inaccurate map.  
 
-	The accuracy is acceptable, considering the very slow monocular camera and imprecise odometry on the Create platform, for tasks where a Create might be used.  But it turns out that drastic impreovements are realized when using the map joining approach.  For these experiments, the resulting accuracy improves by an order of magnitude.  This result is within the radius of the robot's chassis, which is a nice first pass heuristic for the expected accuracy.  The Quasi-Newton algorithm has a complexity of $O(n^2)$ [CITEME!] for n dimensions.  HOW MANY ITERATIONS WILL THIS TAKE?  This is less than the O(n^3) of the EKF, so it does not add any additional complexity to the process.  
+	The accuracy is acceptable, considering the very slow monocular camera and imprecise odometry on the Create platform, for tasks where a Create might be used.  But it turns out that drastic impreovements are realized when using the map joining approach.  For these experiments, the resulting accuracy improves by an order of magnitude.  This result is within the radius of the robot's chassis, which is a nice first pass heuristic for the expected accuracy.  The Quasi-Newton algorithm has a complexity of $O(n^2)$ [CITEME!] for n dimensions.   This is less than the $O(n^3)$ of the EKF, so it does not add any additional complexity to the process.  Additionally, the optimization step only took 2.98 iterations on average and never more than 3 iterations.  
 
-	Multi-robot map joining is not siginifcantly different from single robot map joining.  The lack of accuracy improvement is likely to due to the map joining being a smoothing approach and thus already an ideal estimator.  [CITE]  While there is no improvements as the robot collective is working in a single area,  navigation improvements can come from partitioning 
+	Multi-robot map joining is not siginifcantly different from single robot map joining.  The lack of accuracy improvement is likely to due to the map joining being a smoothing approach and thus already an ideal estimator.  [CITE]  While there is no improvement in mapping accuracy, there is also no degredation when map data is shared in a homogenous swarm.  Trajectory is not considered when sharing maps because tracking is not considered.  Without modification, this algorithm cannot improve on trajectory estimation because it relies on landmarks being stationary over time.
 
-Is multi robot single minima?  Show a graph
-
-Are GA and Newton the same:  OH FUCK THIS IS A TODO ITEM :(
-
-
-Is this fast enough?? Yes!!  Why?
-
-Are there differences between sim and actual?
-
-How much faster than GA?
-
-Why does multi-mapjoin degrade?  Sensors are independent :/
-
-Comparison of efficiency vs accuracy?
-
-Why exclude trajetory
-
-no trajectory improvement necessary
+TODO: Prove multi robot is single minima
+TODO: Show results from GA
+TODO: Show sim results
+TODO: Comparison of efficiency vs accuracy
+TODO: Talk about SVD
 
 \chapter{Conclusions}
 
-Multi robot multi join works
-
-It has a single minima
-
-Iterative, so can be used any time
-
-Is accuracy is better than GPS 3m guarantee!
-
+	Multi Robot map joining using least squares optimization works very well in a homogenous swarm of robots.  While some additional processing is required over the traditional EKF SLAM approaches, it is a small constant factor and does not add any complexity.  That small factor gives strong gains in maping accuracy.  Compared to the time required for the robot to make observations, the method shown here is fast enough to be used in real time, even in an interpreted language such as Matlab.
+	
+	Another feature of this approach is the uniform method used for local smoothing and map sharing.  This method's dual use means the robot's navigation system has, metaphorically, less moving parts to fail.  This is unique in the literature involving map joining SLAM {CITEME}.  Other map joining schemes use a separate algorithm for creating individual maps and joining shared maps. 
+	
+	Finally, multi robot map joining is an iterative process that can be picked up any time as resources are available.  It can also be paused and picked up again at any time, without adversely affecting the results.  The tradeoff is the space required for submap storage.  While non-submap techniques only require a single point for each map feature, submapping requires an point to be stored for each observation.  However, even the Mars rover, Curiosity has 2GB flash memory [cite], which is sufficient for the storage of several large submaps prior to joining.  The need for space is tempered by the estimate of the covariance matrix.  Because of this the submaps need only store the estimate and not the covariance.
+	
 
 \chapter{Future Work}
 
+* Batch mapping 
 * Trajectory tracking
 * 3D space
 * Unknown data association

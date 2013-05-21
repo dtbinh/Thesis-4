@@ -1,0 +1,18 @@
+\contentsline {chapter}{\numberline {1}Introduction: What is SLAM?}{1}
+\contentsline {section}{\numberline {1.1}Motion}{3}
+\contentsline {section}{\numberline {1.2}Observation}{6}
+\contentsline {section}{\numberline {1.3}probablistic models}{7}
+\contentsline {section}{\numberline {1.4}EKF}{10}
+\contentsline {chapter}{\numberline {2}Literature Review: State of the Art}{17}
+\contentsline {section}{\numberline {2.1} Least Squares Estimates }{20}
+\contentsline {section}{\numberline {2.2}Map Joining}{20}
+\contentsline {section}{\numberline {2.3} Spherical Matrices, One Step SLAM and Map Joining}{22}
+\contentsline {section}{\numberline {2.4}SLAM and Machine Learning}{23}
+\contentsline {chapter}{\numberline {3}Methods}{25}
+\contentsline {section}{\numberline {3.1}Robotic Data}{25}
+\contentsline {section}{\numberline {3.2}Simulator}{26}
+\contentsline {section}{\numberline {3.3}Experiments}{27}
+\contentsline {chapter}{\numberline {4}Results}{29}
+\contentsline {chapter}{\numberline {5}Discussions}{33}
+\contentsline {chapter}{\numberline {6}Conclusions}{35}
+\contentsline {chapter}{\numberline {7}Future Work}{37}
