@@ -1,5 +1,6 @@
 package jsim;
 import static java.lang.Math.*;
+import org.ejml.data.DenseMatrix64F;
 
 /** 
  * @author John Downs <john.downs @ ieee.org>
@@ -64,20 +65,40 @@ public class Robot implements Filterable {
         return new Control(v, w);
     }
 
-    public void move() {
+    public Pose move(Control u, Pose x) {
+        double v = u.linearVelocity();
+        double w = u.angularVelocity();
+        double a = x.getHeading();
+        Coordinate c;
+        Pose result;
+
+        if (w == 0) {
+           c = new Coordinate(x.getX() + v * cos(a), x.getY() + v * sin(a));
+           result = new Pose(c, a);
+           return result; 
+        }
+        c = new Coordinate(x.getX() + -v/w * sin(a) + v/w * sin(a + w), 
+                           x.getY() +  v/w * cos(a) - v/w * cos(a + w));
+        p = new Pose(c, a + w);
+        return p;
+    }
+
+    public DenseMatrix64F move_jacobian() {
 
     }
 
-    public void move_jacobian() {
-
+    public Landmark observe(Pose p, Landmark c) {
+        double dx = c.getX() - p.getX();
+        double dy = c.getY() - p.getY();
+        double a = p.getHeading();
+        DenseMatrix64F d = new DenseMatrix64F(2,1, dx, dy);
+        double q = dot(d,d);
+        Landmark L =  new Landmark(sqrt(q), wrap(atan2(dy, dx) - a), c.getId);
+        return L;
     }
 
-    public void observe() {
-
-    }
-
-    public void observe_jacobian() {
-
+    public DenseMatrix64F observe_jacobian() {
+        
     }
 }
 

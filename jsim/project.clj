@@ -11,6 +11,7 @@
   :javac-options ["-Xlint:unchecked"]
   :profiles {:dev {:dependencies [[junit/junit "4.11"]]}}
   :dependencies [[org.clojure/clojure "1.5.1"]
+                 [net.mikera/core.matrix "0.11.0"]
                  [junit/junit "4.11"]
                  [com.googlecode.efficient-java-matrix-library/ejml "0.23"]])
 

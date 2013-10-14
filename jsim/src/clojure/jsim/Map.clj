@@ -1,10 +1,13 @@
-(ns jsim.map)
+(ns jsim.map
+  (:require [core.matrix]))
 
 (defrecord Coordinate "Cartesian Coordinate" [x y])
 
 (defn rotate [coord angle]
   "Rotate coord by angle counter clockwise"
-)
+  (let [R [[(Math/cos angle) (- (Math/sin angle)]
+           [(Math/sin angle) (Math/cos angle)]] 
+))
 
 (defn translate [coord frame]
   "Tranlate coord to frame"

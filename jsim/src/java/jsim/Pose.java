@@ -1,5 +1,6 @@
 package jsim;
 
+import static java.lang.Math.*;
 /**
  ** @author      John Downs <john.downs@ieee.org>
  ** @version     0.1
@@ -18,7 +19,7 @@ public class Pose {
     public Pose(double x, double y, double heading) {
         this.x = x;
         this.y = y;
-        this.a = heading;
+        this.a = atan2(sin(heading), cos(heading));
     }
 
     public Coordinate position() {
