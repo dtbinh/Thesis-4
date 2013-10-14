@@ -1,0 +1,14 @@
+* Initalize 
+** Create Sensor
+** Create landmarks
+** Create waypoints
+** Create robot
+** Create filter
+
+* Run
+** Record map groundtruth
+** Make plan
+** Find next position and record groundtruth
+** Find visible landmarks and record observations with noise
+** Run filter with noisy plan and noisy observations
+   

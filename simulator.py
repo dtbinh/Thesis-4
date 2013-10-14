@@ -1,3 +1,7 @@
+from map import Map
+from robot import Robot
+from math import pi
+
 class Simulator(object):
     def __init__(self, map, robots):
         self.map = map
@@ -13,7 +17,25 @@ class Simulator(object):
         p = r.plan(self.waypoint)
         next_pose = r.move(p)
         obs = self.map.get_visible_landmarks(r)
-        return {'truth': (next_pose, obs),
-                'measured': (r.add_control_noise(p),
-                             r.add_measurement_noise(obs))}
+        return {'step': r.step,
+                'truth': ('pose', next_pose.tolist(), 'obs', obs),
+                'measured': ('u', r.add_control_noise(p).tolist(),
+                             'z', r.add_measurement_noise(obs).tolist())}
 
+    def run_sim(self):
+        try:
+            while True:
+                for id_, _ in enumerate(self.robots):
+                    print self.run_step(id_)
+        except StopIteration:
+            pass
+
+if __name__ == '__main__':
+    m = Map(50,10,10)
+    r = Robot(10,pi/2,1,1)
+    s = Simulator(m, [r])
+    print "Landmarks:"
+    print m.landmarks
+    print "Waypoints:"
+    print m.waypoints
+    s.run_sim()
