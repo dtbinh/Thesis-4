@@ -1,0 +1,36 @@
+Feature: Web application
+  In order to visualize a robot's trajectory and estimate
+  I want to be able to run a simulation and see an animation in the browser
+
+Feature: Command line
+  In order to quickly run experiments
+  I want to be able to run a simulation on the command line
+
+Feature: Data persistance
+  In order to repeat experiments
+  I want to be able to record the data from an experiment
+
+Feature: Ground truth
+  In order to see how accurate a method is
+  I want to be able to compare it to groundtruth and real trajectory
+
+Feature: Run data set
+  In order to repeat experiments
+  I want to be able to run the simulator on an existing data set
+
+Feature: Estimate robot position
+  In order to know where the robot is
+  I want to be able to estimate it's position and the map
+
+Feature: Multiple robots
+  In order to be interesting
+  I want to be able to run multiple robots simultaneously
+
+Feature: Back End
+  In order to have more accurate maps
+  I want to be able to run an offline slam algorithm
+
+Feature: Random landmarks
+Feature: Random waypoints
+Feature: Specify waypoints
+Feature: Specify sensor capabilities

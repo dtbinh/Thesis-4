@@ -12,3 +12,6 @@
 ** Find visible landmarks and record observations with noise
 ** Run filter with noisy plan and noisy observations
    
+* Web Interface
+* Properties file for CLI run
+* Graphical playback of robot run
