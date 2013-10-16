@@ -65,10 +65,13 @@ public class Robot implements Filterable {
         return new Control(v, w);
     }
 
+    /*
+    * Note, addition of old pose is done in this function!
+    */
     public Pose move(Control u, Pose x) {
         double v = u.linearVelocity();
         double w = u.angularVelocity();
-        double a = x.getHeading();
+        double a = x.heading();
         Coordinate c;
         Pose result;
 
@@ -79,26 +82,65 @@ public class Robot implements Filterable {
         }
         c = new Coordinate(x.getX() + -v/w * sin(a) + v/w * sin(a + w), 
                            x.getY() +  v/w * cos(a) - v/w * cos(a + w));
-        p = new Pose(c, a + w);
+        Pose p = new Pose(c, a + w);
         return p;
     }
 
-    public DenseMatrix64F move_jacobian() {
+    public DenseMatrix64F move_jacobian(Control u, Pose x) {
+        double[][] data;
+        double v = u.linearVelocity();
+        double w = u.angularVelocity();
+        double a = x.heading();
+        if (w == 0.0) {
+            data = new double[][] {{0, 0, -v * sin(a)},
+                    {0, 0,  v * sin(a)  },
+                    {0, 0, 0}};
+        } else {
+            data = new double[][] {{0, 0, -v/w * cos(a) + v/w * cos(a + w)},
+                    {0, 0,  v/w * sin(a) + v/w * sin(a + w)},
+                    {0, 0, 0}};
+        }
+        DenseMatrix64F jacobian = new DenseMatrix64F(3, 3, data);
+        return jacobian;
+    }
 
+    private double squareDotProduct(double[] v) {
+        return v[0] * v[0] + v[1] * v[1];
     }
 
     public Landmark observe(Pose p, Landmark c) {
         double dx = c.getX() - p.getX();
         double dy = c.getY() - p.getY();
-        double a = p.getHeading();
-        DenseMatrix64F d = new DenseMatrix64F(2,1, dx, dy);
-        double q = dot(d,d);
+        double a = p.heading();
+        double[] d = {dx, dy};
+        double q = squareDotProduct(d);
         Landmark L =  new Landmark(sqrt(q), wrap(atan2(dy, dx) - a), c.getId);
         return L;
     }
 
-    public DenseMatrix64F observe_jacobian() {
-        
+    public DenseMatrix64F observe_jacobian(Pose p, Landmark c) {
+        double[][] data;
+        //TODO: Make sure Landmarks have ID
+        double dx = c.getX() - p.getX();
+        double dy = c.getY() - p.getY();
+        double[] d = {dx, dy};
+        double q = squareDotProduct(d);
+        double k;
+        if (q == 0) {
+            k = 0;
+        } else {
+            k = 1/q;
+        }
+        double sq = sqrt(q);
+        double ksqx = k * sq * dx;
+        double ksqy = k * sq * dy;
+        double kdy = k * dy;
+        double kdx = k * dx;
+        data = new double[][] {{-ksqx, -ksqy, ksqx, ksqy},
+                {kdy, kdx, k*q, -kdy, kdx, 0},
+                {0, 0, 0 ,0 ,0, k*q}};
+        DenseMatrix64F jacobian = new DenseMatrix64F(data);
+        return jacobian;
     }
 }
 

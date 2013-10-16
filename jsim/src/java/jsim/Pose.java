@@ -25,6 +25,14 @@ public class Pose {
     public Coordinate position() {
         return new Coordinate(x, y);
     }
+
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
     
     public double heading() {
         return a;
