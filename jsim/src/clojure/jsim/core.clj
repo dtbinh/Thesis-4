@@ -1,11 +1,36 @@
 (ns jsim.core
-  (:require [[jsim.robot]
+  (:import [jsim.Robot]
+           [jsim.Sensor))
 
-                        ]))
 
-(defn run-step [])
+(defn make-sensor
+  [sensor-params]
+  (let [range (:range sensor-params)
+        arc (:arc sensor-params)]
+    (new jsim.Sensor range arc)))
 
-(defn run-cli []
+(defn make-robot
+  [robot-params])
+
+(defn make-waypoints
+  [waypoint-params]
+  )
+
+(defn make-landmarks
+  [landmark-params]
+  )
+
+(defn make-efk
+  [ekf-params]
+  )
+
+(defn run-robot [])
+
+(defn add-noise [points])
+
+(defn run-simulator [])
+
+(defn run-cli [] ;TODO: READ PARAMS!
   (let [sensor (make-sensor params)
         bot (make-robot params)
         waypoints (make-waypoints params)
@@ -15,26 +40,11 @@
    (add-noise groundtruth)
    (add-noise observations)
    (run-simulator))
-           
+
 
 (defn -main [& args]
+  (run-cli))
 ; Run CLI or Web?
 ; Read config
 ; Run simulator
 ; Save results
-)
-
-
-(defrecord Coordinate "Cartesian Coordinate" [x y])
-
-(defrecord Map "A collection of landmarks" [landmarks])
-
-(defrecord Control [linear-velocity angular-velocity])
-
-(defrecord Pose [position heading])
-
-(defrecord Sensor [range arc])
-
-(defrecord Drive [noise])
-
-(defrecord Robot [drive sensor pose])
