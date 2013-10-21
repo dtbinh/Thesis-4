@@ -27,7 +27,7 @@ public class Map2DTest {
        c.add(new Coordinate(-1.0, 0.0));
        Map2D m = new Map2D(c, null); 
        Sensor s = new Sensor(2, Math.PI/2);
-       List<Coordinate> landmarks = m.getVisibleLandmarks(new Robot());
+       List<Coordinate> landmarks = m.getVisibleLandmarks(new Robot(s, 1));
        assertEquals(2, landmarks.size());
     }
 

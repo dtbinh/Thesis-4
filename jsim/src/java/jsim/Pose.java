@@ -22,6 +22,12 @@ public class Pose {
         this.a = atan2(sin(heading), cos(heading));
     }
 
+    public Pose(Coordinate c, double heading) {
+        this.x = c.getX();
+        this.y = c.getY();
+        this.a = heading;
+    }
+
     public Coordinate position() {
         return new Coordinate(x, y);
     }

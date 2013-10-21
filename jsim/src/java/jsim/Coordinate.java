@@ -23,7 +23,7 @@ public class Coordinate {
         double zero = ulp(0.0);
         return abs(getX() - c.getX()) < zero && abs(getY() - c.getY()) < zero;
     }
-    
+
     public double getX() {
         return v.get(0);
     }

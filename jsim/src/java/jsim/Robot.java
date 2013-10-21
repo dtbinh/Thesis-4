@@ -5,7 +5,7 @@ import org.ejml.data.DenseMatrix64F;
 /** 
  * @author John Downs <john.downs @ ieee.org>
  */
-public class Robot implements Filterable {
+public class Robot {
     private double maxVelocity;
     private Sensor sensor;
     private Pose pose;
@@ -100,12 +100,16 @@ public class Robot implements Filterable {
                     {0, 0,  v/w * sin(a) + v/w * sin(a + w)},
                     {0, 0, 0}};
         }
-        DenseMatrix64F jacobian = new DenseMatrix64F(3, 3, data);
+        DenseMatrix64F jacobian = new DenseMatrix64F(data); //6 x 3
         return jacobian;
     }
 
     private double squareDotProduct(double[] v) {
         return v[0] * v[0] + v[1] * v[1];
+    }
+
+    private double wrap(double a) {
+        return a;
     }
 
     public Landmark observe(Pose p, Landmark c) {
@@ -114,7 +118,7 @@ public class Robot implements Filterable {
         double a = p.heading();
         double[] d = {dx, dy};
         double q = squareDotProduct(d);
-        Landmark L =  new Landmark(sqrt(q), wrap(atan2(dy, dx) - a), c.getId);
+        Landmark L =  new Landmark(sqrt(q), wrap(atan2(dy, dx) - a), c.getId());
         return L;
     }
 

@@ -1,45 +1,52 @@
 (ns jsim.core
-  (:import [jsim.Robot]
-           [jsim.Sensor))
-
+  (:import [[jsim.Robot]
+           [jsim.Sensor]
+           [jsim.Map2D]]))
 
 (defn make-sensor
-  [sensor-params]
-  (let [range (:range sensor-params)
-        arc (:arc sensor-params)]
-    (new jsim.Sensor range arc)))
+  [range arc]
+  (new jsim.Sensor range arc))
 
 (defn make-robot
-  [robot-params])
+  [sensor max-velocity]
+  (new jsim.Robot sensor max-velocity))
 
-(defn make-waypoints
-  [waypoint-params]
-  )
+(defn make-map
+  [landmarks waypoints radius]
+  (new jsim.Map2D landmarks waypoints radius))
 
-(defn make-landmarks
-  [landmark-params]
-  )
+(defn add-noise [point]
+  (let [rand (new java.util.Random)
+        x-noise (. rand nextGaussian)
+        y-noise (. rand nextGaussian)
+        x (first point)
+        y (second point)]
+    [(+ x x-noise) (+ y y-noise)]))
+
+(defn run-step
+  [bot map2d estimate]
+  (let [control (. bot plan)]
+    (. bot move (add-noise control))
+    (let [z (. bot observe map2d)]
+      (ekf estimate control observe))))
 
 (defn make-efk
-  [ekf-params]
-  )
+  [ekf-params])
 
 (defn run-robot [])
-
-(defn add-noise [points])
 
 (defn run-simulator [])
 
 (defn run-cli [] ;TODO: READ PARAMS!
-  (let [sensor (make-sensor params)
-        bot (make-robot params)
-        waypoints (make-waypoints params)
-        landmarks (make-landmarks params)
+  (let [sensor (make-sensor (:range params) (:arc params))
+        bot (make-robot (:max-velocity params))
+        map2d (make-map (:landmark-count params) (:waypoint-count params) (:radius params))
+
         bayes-filter (make-ekf params)]
    (run-robot) ; get groundtruth
    (add-noise groundtruth)
    (add-noise observations)
-   (run-simulator))
+   (run-simulator)))
 
 
 (defn -main [& args]

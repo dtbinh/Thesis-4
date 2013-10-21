@@ -1,0 +1,43 @@
+package jsim;
+<<<<<<< HEAD
+
+public class Landmark {
+    private Coordinate location;
+    private int id;
+
+    public Landmark(Coordinate c, int id) {
+        location = c;
+        this.id = id;
+    }
+
+    public double getX() {
+        return location.getX();
+    }
+    public double getY() {
+        return location.getY();
+    }
+    public int getId() {
+        return id;
+=======
+import org.ejml.data.D1Matrix64F;
+
+public class Landmark extends Coordinate {
+    private int id;
+
+
+    public Landmark(double x, double y, int id) {
+        super(x, y);
+        this.arc = arc;
+    }
+    public Landmark(D1Matrix64F x, int id) {
+
+    }
+
+    public double getRange() {
+        return range;
+    }
+    public double getArc() {
+        return arc;
+>>>>>>> 88d61801d6551ff372b8ec6780355f62def7d77c
+    }
+}

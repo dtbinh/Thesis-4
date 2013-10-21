@@ -6,8 +6,7 @@ import java.util.Random;
 public class Map2D {
     private Random generator;
     private List<Coordinate> landmarks;
-    private List<Coordinate> waypoints; //Waypoints should belong to robot!
- 
+    private List<Coordinate> waypoints; //Waypoints should belong to robot! 
     private List<Coordinate> generateRandomPoints(double radius, int count) {
         java.util.ArrayList<Coordinate> points = new java.util.ArrayList<Coordinate>();
         for (int i = 0; i < count; i++) {
