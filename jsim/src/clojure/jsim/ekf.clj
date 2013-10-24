@@ -51,7 +51,9 @@
         pose (:pose robot)
         observe (:observation robot)
         feature-map (:feature-map robot)]
-    (if new-landmark? )) )
+    (if new-landmark? )
+    {:x nil
+     :P nil}))
 
 (defn ekf
   [robot
