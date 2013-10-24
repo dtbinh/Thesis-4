@@ -1,6 +1,7 @@
 package jsim;
 import static java.lang.Math.*;
-import org.ejml.data.DenseMatrix64F;
+import org.la4j.matrix.Matrix;
+import org.la4j.matrix.dense.Basic2DMatrix;
 
 /** 
  * @author John Downs <john.downs @ ieee.org>
@@ -9,16 +10,17 @@ public class Robot {
     private double maxVelocity;
     private Sensor sensor;
     private Pose pose;
-
+    private double noise;
     /**
      *  Create a robot with a sensor and maximum velocity
      *  @param sensor Range/bearing sensor @see jsim.sensor
      *  @param maxVelocity Max velocity for both angular and linear motion
      */ 
-    public Robot(Sensor sensor, double maxVelocity) {
+    public Robot(Sensor sensor, double maxVelocity, double noise) {
         pose = new Pose(0,0,0);
         this.sensor = sensor;
         this.maxVelocity = maxVelocity;
+        this.noise = noise;
     }
 
     /**
@@ -26,6 +28,14 @@ public class Robot {
      */
     public Pose getPose() {
         return pose;
+    }
+
+    public double sensorNoise() {
+        return sensor.noise();
+    }
+
+    public double motionNoise() {
+        return noise;
     }
 
     /**
@@ -86,7 +96,7 @@ public class Robot {
         return p;
     }
 
-    public DenseMatrix64F move_jacobian(Control u, Pose x) {
+    public Matrix move_jacobian(Control u, Pose x) {
         double[][] data;
         double v = u.linearVelocity();
         double w = u.angularVelocity();
@@ -100,7 +110,7 @@ public class Robot {
                     {0, 0,  v/w * sin(a) + v/w * sin(a + w)},
                     {0, 0, 0}};
         }
-        DenseMatrix64F jacobian = new DenseMatrix64F(data); //6 x 3
+        Matrix jacobian = new Basic2DMatrix(data); //6 x 3
         return jacobian;
     }
 
@@ -122,7 +132,7 @@ public class Robot {
         return L;
     }
 
-    public DenseMatrix64F observe_jacobian(Pose p, Landmark c) {
+    public Matrix observe_jacobian(Pose p, Landmark c) {
         double[][] data;
         //TODO: Make sure Landmarks have ID
         double dx = c.getX() - p.getX();
@@ -143,7 +153,7 @@ public class Robot {
         data = new double[][] {{-ksqx, -ksqy, ksqx, ksqy},
                 {kdy, kdx, k*q, -kdy, kdx, 0},
                 {0, 0, 0 ,0 ,0, k*q}};
-        DenseMatrix64F jacobian = new DenseMatrix64F(data);
+        Matrix jacobian = new Basic2DMatrix(data);
         return jacobian;
     }
 }

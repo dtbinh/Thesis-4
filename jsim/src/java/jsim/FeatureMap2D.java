@@ -3,14 +3,24 @@ import java.util.List;
 import java.util.Random;
 
 @SuppressWarnings("unchecked")
-public class Map2D {
+public class FeatureMap2D {
     private Random generator;
-    private List<Coordinate> landmarks;
-    private List<Coordinate> waypoints; //Waypoints should belong to robot! 
+    private List<Landmark> landmarks;
+    private List<Coordinate> waypoints; //Waypoints should belong to robot!
+
     private List<Coordinate> generateRandomPoints(double radius, int count) {
         java.util.ArrayList<Coordinate> points = new java.util.ArrayList<Coordinate>();
         for (int i = 0; i < count; i++) {
             points.add(Coordinate.RandomCoordinate(radius));
+        }
+        return points;
+    }
+
+    private List<Landmark> generateRandomLandmarks(double radius, int count) {
+        java.util.ArrayList<Landmark> points = new java.util.ArrayList<Landmark>();
+        for (int i = 0; i < count; i++) {
+            Coordinate c = Coordinate.RandomCoordinate(radius);
+            points.add(new Landmark(c.getX(), c.getY(), i));
         }
         return points;
     }
@@ -21,16 +31,24 @@ public class Map2D {
      * @param waypointCount The number of waypoints for the robot to go to
      * @param radius Radius of the map - all landmarks are in this range
      */ 
-    public Map2D(int landmarkCount, int waypointCount, double radius) {
+    public FeatureMap2D(int landmarkCount, int waypointCount, double radius) {
         generator = new Random();
-        this.landmarks = generateRandomPoints(radius, landmarkCount);
+        this.landmarks = generateRandomLandmarks(radius, landmarkCount);
         this.waypoints = generateRandomPoints(radius, waypointCount);
     }
 
-    public Map2D(List<Coordinate> landmarks, List<Coordinate> waypoints) {
+    public FeatureMap2D(List<Landmark> landmarks, List<Coordinate> waypoints) {
         generator = null;
         this.landmarks = landmarks;
         this.waypoints = waypoints;
+    }
+
+    public int landmarkCount() {
+        return landmarks.size();
+    }
+
+    public List<Landmark> getLandmarks() {
+        return new java.util.ArrayList(landmarks);
     }
 
     public java.util.Iterator<Coordinate> getWaypointIterator() {

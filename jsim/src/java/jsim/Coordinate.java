@@ -2,19 +2,19 @@ package jsim;
 
 import static java.lang.Math.*;
 import static org.ejml.alg.dense.mult.MatrixVectorMult.mult;
-import org.ejml.data.Matrix64F;
-import org.ejml.data.D1Matrix64F;
-import org.ejml.data.DenseMatrix64F;
+import org.la4j.vector.Vector;
+import org.la4j.vector.dense.BasicVector;
+import org.la4j.matrix.Matrix;
+import org.la4j.matrix.dense.Basic2DMatrix;
 import java.util.Random;
 import java.lang.StringBuilder;
 
 public class Coordinate {
-    private D1Matrix64F v;
+    private Vector v;
     static private Random generator = new Random();
 
-    protected D1Matrix64F getData() {
-        D1Matrix64F data = new DenseMatrix64F();
-        data.set(v);
+    protected Vector getData() {
+        Vector data = new BasicVector(v);
         return data;
     }
 
@@ -50,21 +50,20 @@ public class Coordinate {
 
     public Coordinate(double x, double y) {
         double[] state = {x,y};
-        this.v = new DenseMatrix64F(2, 1, true, state);
+        this.v = new BasicVector(state);
     }
 
-    public Coordinate(D1Matrix64F x) {
-        this.v = new DenseMatrix64F(x);
+    public Coordinate(Vector x) {
+        this.v = new BasicVector(x);
     }
 
     public Coordinate rotate(double angle) {
         double sina = sin(angle);
         double cosa = cos(angle);
-        double[] data = {cosa, -sina,
-                           sina, cosa};
-        DenseMatrix64F R = new DenseMatrix64F(2, 2, true, data);
-        D1Matrix64F xr = new DenseMatrix64F(2, 1);
-        mult(R,v, xr);
+        double[][] data = {{cosa, -sina},
+                         {sina, cosa}};
+        Matrix R = new Basic2DMatrix(data);
+        Vector xr = R.multiply(v);
         return new Coordinate(xr); 
     }
 

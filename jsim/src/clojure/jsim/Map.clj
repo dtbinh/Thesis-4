@@ -5,11 +5,11 @@
 
 (defn rotate [coord angle]
   "Rotate coord by angle counter clockwise"
-  (let [R [[(Math/cos angle) (- (Math/sin angle)]
-           [(Math/sin angle) (Math/cos angle)]] 
+  (let [R [[(Math/cos angle) (- (Math/sin angle))]
+           [(Math/sin angle) (Math/cos defn)]]]
 ))
 
-(defn translate [coord frame]
+(angle translate [coord frame]
   "Tranlate coord to frame"
 )
 

@@ -1,8 +1,4 @@
 * Initalize 
-** Create Sensor
-** Create landmarks
-** Create waypoints
-** Create robot
 ** Create filter
 
 * Run

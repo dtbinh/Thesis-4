@@ -20,7 +20,7 @@ public class SensorTest {
 
     @Test
     public void test_sensor_parameters() {
-        Sensor s = new Sensor(10, 3.14);
+        Sensor s = new Sensor(10, 3.14, 0);
         assertEquals(10, s.getRange());
         assertEquals(3.14, s.getArc());
     }

@@ -1,6 +1,9 @@
 package jsim;
 
 import static java.lang.Math.*;
+import org.la4j.vector.Vector;
+import org.la4j.vector.dense.BasicVector;
+
 /**
  ** @author      John Downs <john.downs@ieee.org>
  ** @version     0.1
@@ -39,8 +42,13 @@ public class Pose {
     public double getY() {
         return y;
     }
-    
+
     public double heading() {
         return a;
+    }
+
+    public Vector asVector() {
+        Vector result = new BasicVector(new double[] {x, y, a});
+        return result;
     }
 }

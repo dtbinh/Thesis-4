@@ -1,17 +1,17 @@
 package jsim;
 
-import org.ejml.data.D1Matrix64F;
-import org.ejml.data.DenseMatrix64F;
+import org.la4j.vector.Vector;
+import org.la4j.vector.dense.BasicVector;
 
 public class Landmark extends Coordinate {
-    private int id;
+    private Integer id;
 
-    public Landmark(double x, double y, int id) {
+    public Landmark(double x, double y, Integer id) {
         super(x, y);
         this.id = id;
     }
 
-    public Landmark(D1Matrix64F x, int id) {
+    public Landmark(Vector x, Integer id) {
         super(x);
         this.id = id;
     }
@@ -20,10 +20,14 @@ public class Landmark extends Coordinate {
         return id;
     }
 
-    public D1Matrix64F getData() {
-        double[] data = {getX(), getY(), id};
-        D1Matrix64F result = new DenseMatrix64F();
-        result.setData(data);
+    public Vector getData() {
+        Integer Id = id;
+        if (id == null)
+            Id = -1;
+
+        double[] data = {getX(), getY(), Id};
+        Vector result = new BasicVector(data);
         return result;
     }
+
 }
