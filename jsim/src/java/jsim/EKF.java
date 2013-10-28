@@ -6,17 +6,41 @@ import org.la4j.factory.CCSFactory;
 import org.la4j.factory.Basic2DFactory;
 
 public class EKF {
-    private static Pose getPose(Estimate prior) {
+    /*private static Pose getPose(Estimate prior) {
         Pose pose = new Pose(prior.state.get(0),
                              prior.state.get(1),
                              prior.state.get(2));
         return pose;
     }
 
-    public static Matrix square(Matrix m1, Matrix m2) {
-        Matrix tmp = m1.transpose().multiply(m2);
-        Matrix result = tmp.multiply(m1);
-        return result;
+    public static Estimate predict(Robot r, Estimate e, Vector u) {
+        Vector x0 = estimate.getState();
+        Matrix P0 = estimate.getCovariance();
+
+        Vector x = r.predictState(x0, u); //predicted state
+        Matrix F = r.stateTransitionMatrix(x0, u); //state transition matrix
+        Matrix F1 = F.transpose();
+        Matrix Q = r.processNoiseCovariance(3);
+        Vector P = F.multiply(P0).multiply(F1).add(Q);
+        return new Estimate(x, Q);
+    }
+
+    private static Estimate update_one(Robot r, Estimate e, Vector z, int id) {
+        Vector x_pred = e.getState();
+        Matrix P_pred = e.getCovariance();
+        Vector y = z.subtract(r.predictObservation(x_pred, id)); //innovation
+        Matrix H = r.observationMatrix(x0, id);
+        Matrix H1 = H.transpose();
+        Matrix R = r.observationNoiseCovariance(size);
+        Matrix S = H.multiply(P).multiply(H1).add(R); // innovation covariance
+        Matrix Si = S.withSmartInverter().inverse();
+        Matrix K = P.multiply(H1).multiply(Si); // Kalman Gain
+        Vector x = x_pred.add(K.multiply(y));
+        Matrix P = (I.minus(K.multiply(G))).multiply(P);
+        return new Estimate(x, P);
+    }
+    public static Estimate update(Robot r, Estimate e, List<Vector> observations) {
+        
     }
 
     private static Estimate predict(Robot r, FeatureMap2D m0, Control u) {
@@ -50,5 +74,5 @@ public class EKF {
         Matrix R = I3.multiply(r.motionNoise());
         Matrix Q = I3.multiply(r.sensorNoise());
         return null;
-    }
+        }*/
 }

@@ -1,6 +1,8 @@
 (ns jsim.ekf
   (:require [core.matrix :refer :all]))
 
+(def I3 (identity-matrix 3))
+
 (defn predict
   [robot control]
   (let [motion-noise (:motion-noise robot)
@@ -8,19 +10,17 @@
         P (:covariance robot)
         move (:motion robot)
         move' (:motion' robot)
-        I3 (identity-matrix 3)
-        I3' (transpose I3)
         R (* motion-noise I3)
         Ig [[1 0 0 0 0 0 0]
             [0 1 0 0 0 0 0]
             [0 0 1 0 0 0 0]]
-        noise-matrix (* I3' R I3 )
+        noise-matrix (* I3 R I3 )
         G (+ Ig (move' pose_0 control))
         G' (transpose G)]
     {:x (move pose_0 control)
      :P (+ (* G P G') R)}))
 
-(defn- new-landmark?
+(defn new-landmark?
   [landmark feature-map]
   (let [id (nth landmark 2)
         ids (take-nth 3 (drop 2 feature-map))]
