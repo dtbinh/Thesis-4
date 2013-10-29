@@ -16,8 +16,9 @@
         sina (Math/sin a)
         -sina (- sina)
         R [[cosa -sina]
-           [sina  cosa]]]
-   (mat/scale R p)))
+           [sina  cosa]]
+        pt [(first p) (second p)]]
+   (mat/mmul R pt)))
 
 (defn translate [p f]
   (mat/add p f))
@@ -34,7 +35,7 @@
     (let [x (first landmark)
           y (second landmark)
           d (Math/sqrt (+ (* x x) (* y y)))
-          bearing #(Math/atan2 y x)
+          bearing (Math/atan2 y x)
           range (wrap (+ (:range this) (/ Math/PI 2)))
           arc (:arc this)]
       (and (<= d range)
